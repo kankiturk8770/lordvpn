@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#06141F">
+<title>Lord VPN</title>
+<style>
+:root{--r:22px}
+/* -------THEMES -------*/
+[data-theme=ocean]{--bg:#06141F;--b1:#0FB5AE;--b2:#1D4ED8;--b3:#0E7490;--accent:#2EE6D6;--accent2:#14B8A6;--on:#032A2A;--text:#EAFBFB;--muted:#9CC3CB;--glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.12);--edge:rgba(255,255,255,.16);--field:rgba(0,0,0,.22)}
+[data-theme=aurora]{--bg:#0B0820;--b1:#7C3AED;--b2:#10B981;--b3:#DB2777;--accent:#A78BFA;--accent2:#34D399;--on:#170B33;--text:#F3EEFF;--muted:#B8AEDB;--glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.12);--edge:rgba(255,255,255,.16);--field:rgba(0,0,0,.25)}
+[data-theme=sunset]{--bg:#1A0B12;--b1:#F97316;--b2:#E11D48;--b3:#F59E0B;--accent:#FFB054;--accent2:#FB7185;--on:#3A1004;--text:#FFF3EC;--muted:#E5B9A8;--glass:rgba(255,255,255,.08);--glass2:rgba(255,255,255,.13);--edge:rgba(255,255,255,.18);--field:rgba(0,0,0,.25)}
+[data-theme=midnight]{--bg:#05070F;--b1:#2563EB;--b2:#4F46E5;--b3:#0EA5E9;--accent:#60A5FA;--accent2:#818CF8;--on:#06122E;--text:#E8EEFF;--muted:#98A6C8;--glass:rgba(255,255,255,.06);--glass2:rgba(255,255,255,.11);--edge:rgba(255,255,255,.14);--field:rgba(0,0,0,.3)}
+[data-theme=emerald]{--bg:#03130C;--b1:#22C55E;--b2:#065F46;--b3:#A3E635;--accent:#4ADE80;--accent2:#A3E635;--on:#052E16;--text:#ECFDF3;--muted:#A3CDB4;--glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.12);--edge:rgba(255,255,255,.16);--field:rgba(0,0,0,.25)}
+[data-theme=frost]{--bg:#DCE8F2;--b1:#7DD3FC;--b2:#C4B5FD;--b3:#99F6E4;--accent:#0EA5E9;--accent2:#6366F1;--on:#FFFFFF;--text:#0F2233;--muted:#4D6478;--glass:rgba(255,255,255,.45);--glass2:rgba(255,255,255,.65);--edge:rgba(255,255,255,.8);--field:rgba(255,255,255,.55)}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#03070c}
+body{font-family:-apple-system,"Segoe UI",Roboto,"Vazirmatn",sans-serif;color:var(--text);display:flex;justify-content:center;align-items:center}
+.phone{color:var(--text);width:100%;max-width:420px;height:100%;max-height:880px;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;transition:background .5s;isolation:isolate}
+@media(min-width:500px){.phone{border-radius:38px;height:860px;box-shadow:0 30px 80px #000a,0 0 0 10px #0d141c}}
+/* animated blobs behind glass */
+.bg{position:absolute;inset:0;z-index:-1;overflow:hidden}
+.bg i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;transition:background .6s}
+.bg i:nth-child(1){width:320px;height:320px;background:var(--b1);top:-80px;left:-90px;animation:float1 16s ease-in-out infinite}
+.bg i:nth-child(2){width:280px;height:280px;background:var(--b2);top:38%;right:-120px;animation:float2 19s ease-in-out infinite}
+.bg i:nth-child(3){width:260px;height:260px;background:var(--b3);bottom:-90px;left:10%;animation:float3 22s ease-in-out infinite}
+[data-state=on] .bg i{opacity:.75}
+@keyframes float1{50%{transform:translate(60px,90px) scale(1.15)}}
+@keyframes float2{50%{transform:translate(-80px,-60px) scale(.9)}}
+@keyframes float3{50%{transform:translate(70px,-50px) scale(1.1)}}
+.glass{background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);box-shadow:0 8px 30px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.12)}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 8px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:.3px}
+.logo svg{width:30px;height:30px}.logo .s{fill:var(--accent)}.logo .l{fill:var(--bg)}
+.hbtns{display:flex;gap:8px}
+.icon-btn{width:42px;height:42px;border-radius:14px;color:var(--text);display:grid;place-items:center;cursor:pointer;font-size:18px}
+.icon-btn svg{width:20px;height:20px}
+main{flex:1;overflow-y:auto;padding:0 18px 100px}
+[data-page=home] main{padding-bottom:170px}
+main::-webkit-scrollbar{display:none}
+.page{display:none;animation:fade .25s ease}.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+/* Home */
+.status-pill{margin:6px auto 0;width:max-content;padding:8px 16px;border-radius:99px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:#FF6B6B}
+.on .dot{background:#38D98A;box-shadow:0 0 10px #38D98A}.on .status-pill{color:var(--text)}
+.connecting .dot{background:#FFC24B;animation:blink .7s infinite}
+@keyframes blink{50%{opacity:.2}}
+.orb-wrap{position:relative;height:250px;display:grid;place-items:center}
+.wave{position:absolute;width:170px;height:170px;border-radius:50%;border:1.5px solid var(--accent);opacity:0}
+.on .wave{animation:ripple 3s infinite}.on .wave:nth-child(2){animation-delay:1s}.on .wave:nth-child(3){animation-delay:2s}
+@keyframes ripple{0%{transform:scale(.85);opacity:.6}100%{transform:scale(1.55);opacity:0}}
+.orb{width:170px;height:170px;border-radius:50%;display:grid;place-items:center;transition:.4s;position:relative}
+.orb::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed var(--edge)}
+.connecting .orb::before{animation:spin 2.4s linear infinite;border-color:var(--accent)}
+.orb svg{width:64px;height:64px;color:var(--muted);transition:.4s}
+.on .orb{background:linear-gradient(145deg,var(--accent),var(--accent2));box-shadow:0 0 80px color-mix(in srgb,var(--accent) 60%,transparent);border-color:transparent}
+.on .orb svg{color:var(--on)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.timer{text-align:center;font-variant-numeric:tabular-nums;font-size:32px;font-weight:300;letter-spacing:2px;margin-top:-4px}
+.ip{text-align:center;color:var(--muted);font-size:14px;margin-top:2px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0 12px}
+.stat{border-radius:var(--r);padding:14px 16px}
+.stat small{color:var(--muted);font-size:13px}
+.stat b{font-size:20px;display:block;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat b em{font-style:normal;font-size:13px;color:var(--muted);font-weight:500}
+.cur{border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer}
+.flag{width:42px;height:42px;border-radius:50%;background:var(--glass2);display:grid;place-items:center;font-size:22px;flex-shrink:0}
+.cur .meta,.srv .meta{flex:1;min-width:0}
+.cur .meta b,.srv .meta b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cur .meta small,.srv .meta small{color:var(--muted);font-size:13px}
+.chev{color:var(--muted)}
+.mode{display:flex;border-radius:18px;padding:4px;margin-top:12px}
+.mode button{flex:1;border:0;background:none;color:var(--muted);padding:11px 6px;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s}
+.mode button.sel{background:var(--glass2);color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+/* rectangular connect button */
+.connect-bar{position:absolute;left:16px;right:16px;bottom:84px;z-index:5;display:none}
+[data-page=home] .connect-bar{display:block}
+.cbtn{width:100%;height:62px;border-radius:20px;border:1px solid var(--edge);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;font-size:17px;font-weight:800;letter-spacing:1.2px;color:var(--on);
+  background:linear-gradient(120deg,var(--accent),var(--accent2));box-shadow:0 12px 34px color-mix(in srgb,var(--accent) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.35);position:relative;overflow:hidden;transition:transform .15s}
+.cbtn:active{transform:scale(.98)}
+.cbtn svg{width:22px;height:22px}
+.cbtn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:shine 3.5s infinite}
+@keyframes shine{0%,60%{left:-60%}100%{left:130%}}
+[data-state=on] .cbtn{background:var(--glass2);color:var(--text);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 8px 30px rgba(0,0,0,.2)}
+[data-state=on] .cbtn::after{display:none}
+[data-state=connecting] .cbtn svg{animation:spin 1s linear infinite}
+/* Servers */
+h2{font-size:24px;margin:8px 2px 14px}
+.toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.chip{color:var(--text);padding:10px 14px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+.chip.primary{background:linear-gradient(120deg,var(--accent),var(--accent2));color:var(--on);border-color:transparent}
+.chip svg{width:16px;height:16px}
+.search{width:100%;color:var(--text);border-radius:16px;padding:13px 14px;font-size:15px;margin-bottom:12px;outline:none}
+.search::placeholder,textarea::placeholder,input::placeholder{color:var(--muted);opacity:.8}
+.group-title{color:var(--muted);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:16px 4px 8px;display:flex;justify-content:space-between}
+.srv{border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;transition:.2s}
+.srv.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.srv .meta b{font-size:15px}
+.proto{font-size:11px;font-weight:800;padding:3px 7px;border-radius:6px;background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--accent);margin-right:6px}
+[data-theme=frost] .proto{color:var(--accent2)}
+.ping{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+.ping.g{color:#38D98A}.ping.y{color:#F5B83D}.ping.r{color:#FF6B6B}.ping.n{color:var(--muted)}
+.more{background:none;border:0;color:var(--muted);padding:6px;cursor:pointer;font-size:18px}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:15px;line-height:1.7}
+/* Settings */
+.set-card{border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;gap:12px;border-bottom:1px solid var(--edge)}
+.row:last-child{border:0}
+.row .t b{font-size:15px;display:block;font-weight:600}.row .t small{color:var(--muted);font-size:13px}
+.sw{width:48px;height:28px;border-radius:99px;background:var(--field);border:1px solid var(--edge);position:relative;cursor:pointer;flex-shrink:0;transition:.2s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;opacity:.8;transition:.2s}
+.sw.on{background:linear-gradient(120deg,var(--accent),var(--accent2))}.sw.on::after{left:22px;opacity:1}
+.row input,.row select{background:var(--field);border:1px solid var(--edge);color:var(--text);border-radius:12px;padding:8px 10px;font-size:14px;width:150px;outline:none}
+select option{background:#1a2430;color:#fff}
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px}
+.th{border-radius:16px;padding:10px 6px 9px;cursor:pointer;text-align:center;font-size:13px;font-weight:700;border:1.5px solid var(--edge);background:var(--field);color:var(--text)}
+.th.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.th .sw8{height:38px;border-radius:11px;margin-bottom:7px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+/* Logs */
+.log{border-radius:18px;padding:14px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.7;color:var(--text);min-height:300px;white-space:pre-wrap;word-break:break-all;background:var(--field)!important}
+.log .w{color:#F5B83D}.log .i{color:var(--accent)}.log .e{color:#FF6B6B}
+/* Nav */
+nav{position:absolute;bottom:10px;left:12px;right:12px;display:flex;padding:7px;border-radius:24px;z-index:6}
+nav button{flex:1;background:none;border:0;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;font-weight:600;padding:6px;cursor:pointer;border-radius:16px;transition:.2s}
+nav button svg{width:22px;height:22px}
+nav button.active{color:var(--text);background:var(--glass2)}
+/* Sheet */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.25s;z-index:10}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;border-radius:28px;padding:10px 18px 22px;transform:translateY(110%);transition:.3s cubic-bezier(.2,.8,.2,1);z-index:11;max-height:86%;overflow-y:auto;background:color-mix(in srgb,var(--bg) 90%,transparent)!important}
+.sheet.show{transform:none}
+.grab{width:44px;height:5px;border-radius:9px;background:var(--edge);margin:4px auto 14px}
+.sheet h3{font-size:19px;margin-bottom:14px}
+.opt{display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--edge);margin-bottom:8px;cursor:pointer;font-size:15px;font-weight:600}
+.opt svg{width:22px;height:22px;color:var(--accent);flex-shrink:0}
+.opt small{display:block;color:var(--muted);font-weight:400;font-size:13px}
+.opt.danger{color:#FF6B6B}
+textarea,.field input,.field select{width:100%;background:var(--field);border:1px solid var(--edge);color:var(--text);border-radius:14px;padding:12px;font-size:14px;outline:none;font-family:inherit}
+textarea{min-height:120px;resize:vertical;font-family:ui-monospace,monospace;font-size:13px}
+.field{margin-bottom:10px}.field label{display:block;color:var(--muted);font-size:13px;margin:0 0 5px 2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;border:0;background:linear-gradient(120deg,var(--accent),var(--accent2));color:var(--on);font-weight:800;font-size:15px;padding:14px;border-radius:16px;cursor:pointer;margin-top:6px}
+.btn.ghost{color:var(--text)}
+.btn.danger{color:#FF6B6B}
+.toast{position:absolute;left:50%;bottom:160px;transform:translate(-50%,20px);color:var(--text);padding:11px 18px;border-radius:14px;font-size:14px;font-weight:700;opacity:0;transition:.25s;z-index:20;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.share{background:var(--field);border-radius:14px;padding:12px;font-family:monospace;font-size:12px;word-break:break-all;margin-bottom:10px;max-height:140px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="phone" id="app" data-theme="ocean" data-page="home" data-state="off">
+  <div class="bg"><i></i><i></i><i></i></div>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 32 32"><path class="s" d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7L16 2Z"/><path class="l" d="M11 10v12h10v-3h-6.5V10z"/></svg>
+      Lord VPN
+    </div>
+    <div class="hbtns"><button class="icon-btn glass" onclick="cycleTheme()" aria-label="Theme">🎨</button><button class="icon-btn glass" onclick="openImport()" aria-label="Add config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="page active" id="p-home">
+      <div id="home" class="">
+        <div class="status-pill glass"><span class="dot"></span><span id="stText">Not connected</span></div>
+        <div class="orb-wrap">
+          <div class="wave"></div><div class="wave"></div><div class="wave"></div>
+          <div class="orb glass" id="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.4 8.8 8 10 4.6-1.2 8-5 8-10V6z"/><path id="orbMark" d="M9 12l2 2 4-4"/></svg></div>
+        </div>
+        <div class="timer" id="timer">00:00:00</div>
+        <div class="ip" id="ipLine">Your connection is not protected</div>
+        <div class="stats">
+          <div class="stat glass"><small>↓ Download</small><b id="dl">0 <em>KB/s</em></b></div>
+          <div class="stat glass"><small>↑ Upload</small><b id="ul">0 <em>KB/s</em></b></div>
+        </div>
+        <div class="cur glass" onclick="go('servers')">
+          <div class="flag" id="curFlag">🌐</div>
+          <div class="meta"><b id="curName">No config selected</b><small id="curSub">Tap + to import a config</small></div>
+          <span class="ping n" id="curPing"></span>
+          <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </div>
+        <div class="mode glass" id="modeSel">
+          <button data-m="proxy" class="sel">Proxy only</button>
+          <button data-m="vpn">VPN (TUN)</button>
+          <button data-m="global">Global</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVERS -->
+    <section class="page" id="p-servers">
+      <h2>Configs</h2>
+      <input class="search glass" id="q" placeholder="Search configs…" oninput="renderServers()">
+      <div class="toolbar">
+        <button class="chip glass primary" onclick="openImport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Add</button>
+        <button class="chip glass" onclick="pingAll()">⚡ Test all</button>
+        <button class="chip glass" onclick="sortByPing()">↕ Sort by ping</button>
+        <button class="chip glass" onclick="updateSubs()">⟳ Update subs</button>
+      </div>
+      <div id="list"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="page" id="p-settings">
+      <h2>Settings</h2>
+      <div class="group-title">Theme</div>
+      <div class="set-card glass"><div class="themes" id="themes"></div></div>
+      <div class="group-title">Routing</div>
+      <div class="set-card glass">
+        <div class="row"><div class="t"><b>Bypass LAN</b><small>Local addresses go direct</small></div><div class="sw" data-k="bypassLan"></div></div>
+        <div class="row"><div class="t"><b>Bypass Iran (geoip:ir)</b><small>Domestic sites go direct</small></div><div class="sw" data-k="bypassIr"></div></div>
+        <div class="row"><div class="t"><b>Block ads</b><small>geosite:category-ads</small></div><div class="sw" data-k="blockAds"></div></div>
+        <div class="row"><div class="t"><b>Domain strategy</b></div><select data-k="domainStrategy"><option>AsIs</option><option>IPIfNonMatch</option><option>IPOnDemand</option></select></div>
+      </div>
+      <div class="group-title">Core</div>
+      <div class="set-card glass">
+        <div class="row"><div class="t"><b>Mux</b><small>Multiplex connections</small></div><div class="sw" data-k="mux"></div></div>
+        <div class="row"><div class="t"><b>Fragment</b><small>TLS hello fragmentation</small></div><div class="sw" data-k="fragment"></div></div>
+        <div class="row"><div class="t"><b>Fragment length</b></div><input data-k="fragLen"></div>
+        <div class="row"><div class="t"><b>Sniffing</b><small>http, tls, quic</small></div><div class="sw" data-k="sniff"></div></div>
+        <div class="row"><div class="t"><b>Allow insecure</b><small>Skip TLS verify</small></div><div class="sw" data-k="insecure"></div></div>
+      </div>
+      <div class="group-title">DNS & ports</div>
+      <div class="set-card glass">
+        <div class="row"><div class="t"><b>Remote DNS</b></div><input data-k="remoteDns"></div>
+        <div class="row"><div class="t"><b>Domestic DNS</b></div><input data-k="localDns"></div>
+        <div class="row"><div class="t"><b>SOCKS port</b></div><input data-k="socks" inputmode="numeric"></div>
+        <div class="row"><div class="t"><b>HTTP port</b></div><input data-k="http" inputmode="numeric"></div>
+      </div>
+      <div class="group-title">App</div>
+      <div class="set-card glass">
+        <div class="row"><div class="t"><b>Per-app proxy</b><small>Choose apps that use VPN</small></div><div class="sw" data-k="perApp"></div></div>
+        <div class="row"><div class="t"><b>Kill switch</b><small>Block traffic if VPN drops</small></div><div class="sw" data-k="kill"></div></div>
+        <div class="row"><div class="t"><b>Auto-connect on boot</b></div><div class="sw" data-k="autostart"></div></div>
+      </div>
+      <button class="btn ghost glass" onclick="exportAll()">Export all configs</button>
+      <button class="btn ghost glass danger" onclick="wipe()">Delete all configs</button>
+    </section>
+
+    <!-- LOGS -->
+    <section class="page" id="p-logs">
+      <h2>Logs</h2>
+      <div class="toolbar"><button class="chip glass" onclick="logs=[];renderLogs()">Clear</button><button class="chip glass" onclick="copyText(logs.map(l=>l[1]).join('\n'))">Copy</button></div>
+      <div class="log glass" id="log"></div>
+    </section>
+  </main>
+
+  <div class="connect-bar"><button class="cbtn" id="cbtn" onclick="toggleConnect()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.2a8 8 0 1 0 11.4 0"/></svg><span id="orbText">CONNECT</span></button></div>
+  <nav class="glass">
+    <button class="active" data-p="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 5 3.4 8.8 8 10 4.6-1.2 8-5 8-10V6z"/></svg>VPN</button>
+    <button data-p="servers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>Configs</button>
+    <button data-p="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+    <button data-p="logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Logs</button>
+  </nav>
+
+  <div class="scrim" id="scrim" onclick="closeSheet()"></div>
+  <div class="sheet glass" id="sheet"></div>
+  <div class="toast glass" id="toast"></div>
+</div>
+
+<script>
+/* ===== Storage ===== */
+const LS = k => JSON.parse(localStorage.getItem('lordvpn_'+k)||'null');
+const SS = (k,v) => localStorage.setItem('lordvpn_'+k, JSON.stringify(v));
+let servers = LS('servers') || [];
+let subs = LS('subs') || [];
+let selId = LS('sel');
+let settings = Object.assign({bypassLan:true,bypassIr:true,blockAds:false,domainStrategy:'IPIfNonMatch',mux:false,fragment:false,fragLen:'10-20',sniff:true,insecure:false,remoteDns:'https://1.1.1.1/dns-query',localDns:'78.157.42.100',socks:'10808',http:'10809',perApp:false,kill:false,autostart:false,mode:'vpn',theme:'ocean'}, LS('settings')||{});
+let logs = [];
+const save = () => { SS('servers',servers); SS('subs',subs); SS('sel',selId); SS('settings',settings); };
+
+/* ===== Helpers ===== */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2,10);
+const b64d = s => { s=s.trim().replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; try{ return decodeURIComponent(escape(atob(s))); }catch(e){ return atob(s); } };
+const b64e = s => btoa(unescape(encodeURIComponent(s)));
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1800); }
+function log(lvl,msg){ const d=new Date().toTimeString().slice(0,8); logs.push([lvl,`${d} [${lvl.toUpperCase()}] ${msg}`]); if(logs.length>300) logs.shift(); renderLogs(); }
+function copyText(t){ (navigator.clipboard?.writeText(t)||Promise.reject()).then(()=>toast('Copied')).catch(()=>{ const a=document.createElement('textarea'); a.value=t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); toast('Copied'); }); }
+const FLAGS = {de:'🇩🇪',germany:'🇩🇪',nl:'🇳🇱',netherlands:'🇳🇱',us:'🇺🇸',usa:'🇺🇸',uk:'🇬🇧',gb:'🇬🇧',fr:'🇫🇷',france:'🇫🇷',tr:'🇹🇷',turkey:'🇹🇷',fi:'🇫🇮',finland:'🇫🇮',se:'🇸🇪',ca:'🇨🇦',jp:'🇯🇵',sg:'🇸🇬',ae:'🇦🇪',uae:'🇦🇪',ru:'🇷🇺',am:'🇦🇲',ir:'🇮🇷'};
+function flagFor(name){ const m=String(name).match(/[\u{1F1E6}-\u{1F1FF}]{2}/u); if(m) return m[0]; const w=String(name).toLowerCase().split(/[^a-z]+/); for(const x of w) if(FLAGS[x]) return FLAGS[x]; return '🌐'; }
+
+const clean = n => String(n).replace(/[\u{1F1E6}-\u{1F1FF}]{2}\s*/gu,'').trim()||n;
+/* ===== Config parsing (vmess / vless / trojan / ss / hysteria2 / tuic) ===== */
+function parseLink(link){
+  link = link.trim(); if(!link) return null;
+  const proto = (link.split('://')[0]||'').toLowerCase();
+  try{
+    if(proto==='vmess'){
+      const j = JSON.parse(b64d(link.slice(8)));
+      return {proto:'vmess',name:j.ps||j.add,host:j.add,port:+j.port,id:j.id,net:j.net||'tcp',tls:j.tls||'none',sni:j.sni||j.host||'',path:j.path||'',raw:link};
+    }
+    if(['vless','trojan','hysteria2','hy2','tuic'].includes(proto)){
+      const u = new URL(link.replace(/^[a-z0-9]+:\/\//i,'http://'));
+      const p = u.searchParams;
+      return {proto:proto==='hy2'?'hysteria2':proto,name:decodeURIComponent(u.hash.slice(1))||u.hostname,host:u.hostname.replace(/^\[|\]$/g,''),port:+u.port||443,id:decodeURIComponent(u.username),net:p.get('type')||'tcp',tls:p.get('security')||(proto==='trojan'?'tls':'none'),sni:p.get('sni')||'',path:p.get('path')||p.get('serviceName')||'',raw:link};
+    }
+    if(proto==='ss'){
+      let body = link.slice(5); let name=''; const h=body.indexOf('#'); if(h>-1){ name=decodeURIComponent(body.slice(h+1)); body=body.slice(0,h); }
+      body = body.split('?')[0];
+      let userinfo, hostport;
+      if(body.includes('@')){ [userinfo,hostport]=body.split('@'); if(!userinfo.includes(':')) userinfo=b64d(userinfo); }
+      else { const d=b64d(body); [userinfo,hostport]=[d.slice(0,d.lastIndexOf('@')),d.slice(d.lastIndexOf('@')+1)]; }
+      const [method] = userinfo.split(':'); const idx=hostport.lastIndexOf(':');
+      return {proto:'ss',name:name||hostport.slice(0,idx),host:hostport.slice(0,idx),port:+hostport.slice(idx+1),id:method,net:'tcp',tls:'none',sni:'',path:'',raw:link};
+    }
+  }catch(e){ log('e','Failed to parse: '+link.slice(0,40)+'…'); }
+  return null;
+}
+function importText(text, subId){
+  let t = text.trim();
+  if(!/:\/\//.test(t)){ try{ t = b64d(t); }catch(e){} } // subscription content is often base64
+  const lines = t.split(/\r?\n/).flatMap(l=>l.trim().split(/\s+(?=[a-z0-9]+:\/\/)/i)).map(l=>l.trim()).filter(l=>/^[a-z0-9]+:\/\//i.test(l));
+  let n=0;
+  for(const l of lines){ const s=parseLink(l); if(s){ s.uid=uid(); s.ping=null; s.sub=subId||null; servers.push(s); n++; } }
+  if(n && !selId) selId=servers[0].uid;
+  save(); renderAll(); log('i',`Imported ${n} config(s)`);
+  return n;
+}
+
+/* ===== Render ===== */
+function pingClass(p){ return p==null?'n':p<0?'r':p<250?'g':p<600?'y':'r'; }
+function pingText(p){ return p==null?'—':p<0?'timeout':p+' ms'; }
+function renderServers(){
+  const q = ($('#q').value||'').toLowerCase();
+  const el = $('#list');
+  if(!servers.length){ el.innerHTML = `<div class="empty">No configs yet.<br>Paste a <b>vmess://</b>, <b>vless://</b>, <b>trojan://</b> or <b>ss://</b> link,<br>or add a subscription URL.</div>`; return; }
+  const groups = {}; servers.filter(s=>(s.name+s.host+s.proto).toLowerCase().includes(q)).forEach(s=>{ const g=s.sub?(subs.find(x=>x.id===s.sub)?.name||'Subscription'):'Manual'; (groups[g]=groups[g]||[]).push(s); });
+  el.innerHTML = Object.entries(groups).map(([g,arr])=>`<div class="group-title"><span>${esc(g)}</span><span>${arr.length}</span></div>`+arr.map(s=>`
+    <div class="srv glass ${s.uid===selId?'sel':''}" onclick="select('${s.uid}')">
+      <div class="flag">${flagFor(s.name)}</div>
+      <div class="meta"><b>${esc(clean(s.name))}</b><small><span class="proto">${s.proto.toUpperCase()}</span>${esc(s.net)}${s.tls&&s.tls!=='none'?' · '+esc(s.tls):''}</small></div>
+      <span class="ping ${pingClass(s.ping)}">${pingText(s.ping)}</span>
+      <button class="more" onclick="event.stopPropagation();openSrvMenu('${s.uid}')" aria-label="More">⋮</button>
+    </div>`).join('')).join('') || '<div class="empty">Nothing matches.</div>';
+}
+function renderHome(){
+  const s = servers.find(x=>x.uid===selId);
+  $('#curFlag').textContent = s?flagFor(s.name):'🌐';
+  $('#curName').textContent = s?clean(s.name):'No config selected';
+  $('#curSub').textContent = s?`${s.proto.toUpperCase()} · ${s.host}:${s.port}`:'Tap + to import a config';
+  $('#curPing').textContent = s&&s.ping!=null?pingText(s.ping):''; $('#curPing').className='ping '+pingClass(s?.ping);
+  document.querySelectorAll('#modeSel button').forEach(b=>b.classList.toggle('sel',b.dataset.m===settings.mode));
+}
+function renderLogs(){ $('#log').innerHTML = logs.length?logs.map(([l,m])=>`<div class="${l}">${esc(m)}</div>`).join(''):'<span style="color:#5b7f92">No logs yet.</span>'; }
+function renderSettings(){
+  document.querySelectorAll('[data-k]').forEach(el=>{ const k=el.dataset.k; if(el.classList.contains('sw')) el.classList.toggle('on',!!settings[k]); else el.value=settings[k]; });
+}
+function renderAll(){ renderThemes(); renderServers(); renderHome(); renderSettings(); renderLogs(); }
+
+/* ===== Themes ===== */
+const THEMES=[['ocean','Ocean','#2EE6D6','#1D4ED8'],['aurora','Aurora','#A78BFA','#10B981'],['sunset','Sunset','#FFB054','#E11D48'],['midnight','Midnight','#60A5FA','#4F46E5'],['emerald','Emerald','#4ADE80','#065F46'],['frost','Frost','#7DD3FC','#C4B5FD']];
+function applyTheme(t){ settings.theme=t; $('#app').dataset.theme=t; const bg=getComputedStyle($('#app')).getPropertyValue('--bg').trim(); document.querySelector('meta[name=theme-color]').content=bg; save(); renderThemes(); }
+function renderThemes(){ $('#themes').innerHTML=THEMES.map(([k,n,a,b])=>`<div class="th ${settings.theme===k?'sel':''}" onclick="applyTheme('${k}')"><div class="sw8" style="background:linear-gradient(135deg,${a},${b})"></div>${n}</div>`).join(''); }
+function cycleTheme(){ const i=THEMES.findIndex(t=>t[0]===settings.theme); const n=THEMES[(i+1)%THEMES.length]; applyTheme(n[0]); toast('Theme: '+n[1]); }
+/* ===== Actions ===== */
+function select(id){ selId=id; save(); renderAll(); if(state==='on'){ log('i','Switching server…'); disconnect(true); connect(); } else toast('Selected'); }
+function go(p){ $('#app').dataset.page=p; document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id==='p-'+p)); document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.p===p)); }
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.p));
+document.querySelectorAll('#modeSel button').forEach(b=>b.onclick=()=>{ settings.mode=b.dataset.m; save(); renderHome(); log('i','Mode → '+b.textContent); });
+document.querySelectorAll('.sw').forEach(el=>el.onclick=()=>{ settings[el.dataset.k]=!settings[el.dataset.k]; save(); renderSettings(); log('i',`${el.dataset.k} = ${settings[el.dataset.k]}`); });
+document.querySelectorAll('input[data-k],select[data-k]').forEach(el=>el.onchange=()=>{ settings[el.dataset.k]=el.value; save(); log('i',`${el.dataset.k} = ${el.value}`); });
+
+const pingWait={};
+function fakePing(s){ if(window.LordNative) return new Promise(r=>{ const id=uid(); pingWait[id]=r; LordNative.ping(id,s.raw,JSON.stringify(settings)); setTimeout(()=>{ if(pingWait[id]){ delete pingWait[id]; r(-1);} },12000); });
+  return demoPing(s); }
+function demoPing(s){ return new Promise(r=>setTimeout(()=>{ const h=[...s.host].reduce((a,c)=>a+c.charCodeAt(0),0); r(Math.random()<.12?-1:80+((h*37+Math.random()*200)|0)%700); }, 300+Math.random()*900)); }
+async function pingAll(){ if(!servers.length) return toast('No configs'); toast('Testing…'); servers.forEach(s=>s.ping=null); renderServers(); await Promise.all(servers.map(async s=>{ s.ping=await fakePing(s); renderServers(); })); save(); renderHome(); log('i','Real delay test finished'); }
+function sortByPing(){ servers.sort((a,b)=>(a.ping==null||a.ping<0?1e9:a.ping)-(b.ping==null||b.ping<0?1e9:b.ping)); save(); renderServers(); toast('Sorted'); }
+async function updateSubs(){
+  if(!subs.length) return toast('No subscriptions');
+  for(const sub of subs){
+    log('i','Updating '+sub.name);
+    try{ const r=await fetch(sub.url); const t=await r.text(); servers=servers.filter(s=>s.sub!==sub.id); const n=importText(t,sub.id); toast(`${sub.name}: ${n} configs`); }
+    catch(e){ log('e',`${sub.name}: fetch failed (needs native app / CORS)`); toast('Update failed'); }
+  }
+}
+
+/* ===== Connect state machine (UI simulation) ===== */
+let state='off', t0=0, tick=null, rx=0, tx=0;
+function setState(s){ state=s; const h=$('#home'); h.className = s==='on'?'on':s==='connecting'?'connecting':'';
+  $('#stText').textContent = s==='on'?'Connected':s==='connecting'?'Connecting…':'Not connected';
+  $('#orbText').textContent = s==='on'?'DISCONNECT':s==='connecting'?'CONNECTING…':'CONNECT';
+  $('#app').dataset.state=s; const cur=servers.find(x=>x.uid===selId);
+  $('#ipLine').textContent = s==='on'?`Protected via ${cur?cur.host:''}`:s==='connecting'?'Establishing secure tunnel…':'Your connection is not protected'; }
+function toggleConnect(){ state==='off'?connect():disconnect(); }
+function connect(){
+  const s=servers.find(x=>x.uid===selId); if(!s){ toast('Import a config first'); openImport(); return; }
+  setState('connecting'); if(window.LordNative){ LordNative.start(s.raw, JSON.stringify(settings)); return; }
+  log('i',`Starting core: ${s.proto}://${s.host}:${s.port} [${s.net}/${s.tls}]`);
+  log('i',`Inbounds: socks ${settings.socks}, http ${settings.http} · mode ${settings.mode}`);
+  if(settings.fragment) log('w','Fragment enabled: '+settings.fragLen);
+  setTimeout(async()=>{ if(state!=='connecting') return; let p=await demoPing(s); if(p<0) p=120+(Math.random()*150|0); s.ping=p; save();
+    if(p<0){ setState('off'); log('e','Connection timeout'); toast('Connection failed'); renderAll(); return; }
+    setState('on'); t0=Date.now(); rx=tx=0; log('i',`Connected · delay ${p} ms`); renderAll();
+    tick=setInterval(()=>{ const sec=(Date.now()-t0)/1000|0; $('#timer').textContent=[sec/3600|0,(sec/60|0)%60,sec%60].map(n=>String(n).padStart(2,'0')).join(':');
+      const d=(Math.random()*900+100)|0, u=(Math.random()*120+10)|0; $('#dl').innerHTML=fmt(d); $('#ul').innerHTML=fmt(u); },1000);
+  }, 1200);
+}
+/* called from Android */
+window.onNative=function(ev,data){
+  if(ev==='connected'){ setState('on'); t0=Date.now(); log('i','Connected'); clearInterval(tick); tick=setInterval(()=>{ const sec=(Date.now()-t0)/1000|0; $('#timer').textContent=[sec/3600|0,(sec/60|0)%60,sec%60].map(n=>String(n).padStart(2,'0')).join(':'); },1000); }
+  else if(ev==='stats'){ const d=JSON.parse(data); $('#dl').innerHTML=fmt(d.down|0); $('#ul').innerHTML=fmt(d.up|0); }
+  else if(ev==='stopped'){ disconnect(true); log('i','Disconnected'); }
+  else if(ev==='error'){ disconnect(true); log('e',data); toast(data); }
+  else if(ev==='log'){ log('i',data); }
+  else if(ev==='ping'){ const d=JSON.parse(data); const r=pingWait[d.id]; if(r){ delete pingWait[d.id]; r(d.ms); } }
+};
+function fmt(k){ return k>1000?`${(k/1000).toFixed(1)} <em>MB/s</em>`:`${k} <em>KB/s</em>`; }
+function disconnect(silent){ if(window.LordNative&&!silent) LordNative.stop(); clearInterval(tick); setState('off'); $('#timer').textContent='00:00:00'; $('#dl').innerHTML='0 <em>KB/s</em>'; $('#ul').innerHTML='0 <em>KB/s</em>'; if(!silent) log('i','Disconnected'); }
+
+/* ===== Sheets ===== */
+function sheet(html){ $('#sheet').innerHTML='<div class="grab"></div>'+html; $('#sheet').classList.add('show'); $('#scrim').classList.add('show'); }
+function closeSheet(){ $('#sheet').classList.remove('show'); $('#scrim').classList.remove('show'); }
+function openImport(){
+  sheet(`<h3>Add config</h3>
+  <div class="opt" onclick="fromClipboard()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><div>Import from clipboard<small>vmess, vless, trojan, ss, hy2, tuic</small></div></div>
+  <div class="opt" onclick="pasteSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg><div>Paste links manually<small>One or many, or base64 subscription</small></div></div>
+  <div class="opt" onclick="subSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg><div>Subscription URL<small>Auto-update groups</small></div></div>
+  <div class="opt" onclick="manualSheet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><div>Manual entry<small>Type server details</small></div></div>
+  <div class="opt" onclick="toast('QR scan works in the Android build');"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4"/><rect x="8" y="8" width="8" height="8"/></svg><div>Scan QR code<small>Camera</small></div></div>`);
+}
+async function fromClipboard(){ try{ const t=window.LordNative?LordNative.readClipboard():await navigator.clipboard.readText(); const n=importText(t); closeSheet(); toast(n?`Imported ${n}`:'No valid config in clipboard'); }catch(e){ pasteSheet(); } }
+function pasteSheet(){ sheet(`<h3>Paste configs</h3><textarea id="pasteBox" placeholder="vless://...&#10;vmess://...&#10;trojan://..."></textarea><button class="btn" onclick="const n=importText($('#pasteBox').value);closeSheet();toast(n?'Imported '+n:'Nothing valid found')">Import</button>`); setTimeout(()=>$('#pasteBox').focus(),300); }
+function subSheet(){
+  sheet(`<h3>Subscriptions</h3>${subs.map(s=>`<div class="opt" style="justify-content:space-between"><div>${esc(s.name)}<small>${esc(s.url.slice(0,38))}…</small></div><span style="color:var(--red)" onclick="delSub('${s.id}')">✕</span></div>`).join('')}
+  <div class="field"><label>Name</label><input id="subName" placeholder="My subscription"></div>
+  <div class="field"><label>URL</label><input id="subUrl" placeholder="https://…"></div>
+  <button class="btn" onclick="addSub()">Add & update</button>`);
+}
+function addSub(){ const url=$('#subUrl').value.trim(); if(!/^https?:\/\//.test(url)) return toast('Enter a valid URL'); subs.push({id:uid(),name:$('#subName').value.trim()||'Subscription',url}); save(); closeSheet(); updateSubs(); }
+function delSub(id){ subs=subs.filter(s=>s.id!==id); servers=servers.filter(s=>s.sub!==id); save(); renderAll(); subSheet(); }
+function manualSheet(){
+  sheet(`<h3>Manual config</h3>
+  <div class="field"><label>Protocol</label><select id="mProto"><option>vless</option><option>vmess</option><option>trojan</option></select></div>
+  <div class="field"><label>Remark</label><input id="mName" placeholder="Germany 1"></div>
+  <div class="two"><div class="field"><label>Address</label><input id="mHost" placeholder="example.com"></div><div class="field"><label>Port</label><input id="mPort" value="443" inputmode="numeric"></div></div>
+  <div class="field"><label>UUID / Password</label><input id="mId"></div>
+  <div class="two"><div class="field"><label>Network</label><select id="mNet"><option>tcp</option><option>ws</option><option>grpc</option><option>httpupgrade</option><option>xhttp</option></select></div><div class="field"><label>Security</label><select id="mTls"><option>tls</option><option>reality</option><option>none</option></select></div></div>
+  <div class="two"><div class="field"><label>SNI</label><input id="mSni"></div><div class="field"><label>Path</label><input id="mPath" placeholder="/"></div></div>
+  <button class="btn" onclick="saveManual()">Save</button>`);
+}
+function saveManual(){
+  const v=id=>$('#'+id).value.trim(); const p=v('mProto'); if(!v('mHost')||!v('mId')) return toast('Address and UUID are required');
+  let raw; if(p==='vmess') raw='vmess://'+b64e(JSON.stringify({v:'2',ps:v('mName'),add:v('mHost'),port:v('mPort'),id:v('mId'),net:v('mNet'),tls:v('mTls')==='none'?'':v('mTls'),sni:v('mSni'),path:v('mPath')}));
+  else raw=`${p}://${encodeURIComponent(v('mId'))}@${v('mHost')}:${v('mPort')}?type=${v('mNet')}&security=${v('mTls')}${v('mSni')?'&sni='+v('mSni'):''}${v('mPath')?'&path='+encodeURIComponent(v('mPath')):''}#${encodeURIComponent(v('mName')||v('mHost'))}`;
+  importText(raw); closeSheet(); toast('Saved');
+}
+function openSrvMenu(id){
+  const s=servers.find(x=>x.uid===id);
+  sheet(`<h3>${esc(s.name)}</h3>
+  <div class="opt" onclick="select('${id}');closeSheet()">✓<div>Select</div></div>
+  <div class="opt" onclick="(async()=>{s=servers.find(x=>x.uid==='${id}');s.ping=await fakePing(s);save();renderAll();toast(pingText(s.ping))})()">⚡<div>Test delay</div></div>
+  <div class="opt" onclick="shareSheet('${id}')">⇪<div>Share link<small>Copy config URL</small></div></div>
+  <div class="opt" onclick="renameSrv('${id}')">✎<div>Rename</div></div>
+  <div class="opt danger" onclick="delSrv('${id}')">🗑<div>Delete</div></div>`);
+}
+function shareSheet(id){ const s=servers.find(x=>x.uid===id); sheet(`<h3>Share</h3><div class="share">${esc(s.raw)}</div><button class="btn" onclick="copyText(servers.find(x=>x.uid==='${id}').raw)">Copy link</button>`); }
+function renameSrv(id){ const s=servers.find(x=>x.uid===id); const n=prompt('New name',s.name); if(n){ s.name=n; save(); renderAll(); } closeSheet(); }
+function delSrv(id){ servers=servers.filter(s=>s.uid!==id); if(selId===id) selId=servers[0]?.uid||null; save(); renderAll(); closeSheet(); toast('Deleted'); }
+function exportAll(){ if(!servers.length) return toast('No configs'); copyText(servers.map(s=>s.raw).join('\n')); }
+function wipe(){ if(confirm('Delete all configs?')){ servers=[]; subs=[]; selId=null; save(); disconnect(true); renderAll(); toast('Cleared'); } }
+
+applyTheme(settings.theme); renderAll();
+if(window.LordNative){ const c=LordNative.coreInfo(); log(c==='missing'?'e':'i','Core: '+(c==='missing'?'Xray core missing':c)); if(LordNative.isRunning()) onNative('connected',''); }
+else log('i','Lord VPN ready · browser preview (connection simulated)');
+</script>
+</body>
+</html>
