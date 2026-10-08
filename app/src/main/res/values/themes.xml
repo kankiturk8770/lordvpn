@@ -1,7 +1,8 @@
 <resources>
-    <style name="Theme.LordVPN" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@color/bg</item>
-        <item name="android:statusBarColor">@color/bg</item>
-        <item name="android:navigationBarColor">@color/bg</item>
+    <style name="Theme.LordV2" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lord_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorAccent">#FF23D5E8</item>
     </style>
 </resources>
