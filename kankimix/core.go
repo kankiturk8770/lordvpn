@@ -431,7 +431,10 @@ func (c *Core) processSymbol(symbol *queuedSymbol, now int64) {
 	_ = primary.sendData(id, symbol.class, ttlMillis, payload)
 
 	lossPPM := primary.lossPPM.Load()
-	if symbol.class == ClassCritical || (symbol.class == ClassRealtime && lossPPM >= 100_000) {
+	// Low-rate realtime streams (game ticks) are duplicated on a second path:
+	// it costs a few KB/s and turns an outage of one network into no loss.
+	lowRate := e.gapAvg >= 4_000 && e.sizeAvg <= 400
+	if symbol.class == ClassCritical || (symbol.class == ClassRealtime && (lossPPM >= 100_000 || lowRate)) {
 		if second := c.secondPath(primary); second != nil {
 			_ = second.sendData(id, symbol.class, ttlMillis, payload)
 		}

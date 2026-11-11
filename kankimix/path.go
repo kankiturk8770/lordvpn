@@ -35,6 +35,7 @@ const (
 	minProbeInterval  = 100_000
 	maxProbeInterval  = 2_000_000
 	defaultProbeStart = 200_000
+	rttProbeInterval  = 1_000_000
 )
 
 type sentPacket struct {
@@ -581,6 +582,10 @@ func (p *Path) sendProbeLocked(now int64) {
 	_ = p.sendControl(kindChallenge, token, p.remoteAddress())
 }
 
+func (p *Path) lastProbeAt() int64 {
+	return p.tokenAt[(p.tokenNext+probeTokens-1)%probeTokens]
+}
+
 func (p *Path) probeNow(now int64) {
 	p.probeMu.Lock()
 	p.sendProbeLocked(now)
@@ -716,6 +721,10 @@ func (p *Path) maintain(now int64) int64 {
 	case waiting > suspect && (!p.probeOutstanding || now >= p.nextProbeAt):
 		p.sendProbeLocked(now)
 	case now-p.lastSendAny.Load() >= config.KeepAlive.Microseconds() && !p.probeOutstanding:
+		p.sendProbeLocked(now)
+	case !p.probeOutstanding && now-p.lastProbeAt() >= rttProbeInterval && (p.srttA.Load() == 0 || now-p.lastSend.Load() >= rttProbeInterval):
+		// A standby path carries no data, so ACKs give it no RTT samples:
+		// probe it periodically so failover and path choice use fresh numbers.
 		p.sendProbeLocked(now)
 	}
 	if p.probeOutstanding {
