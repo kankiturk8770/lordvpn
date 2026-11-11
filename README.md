@@ -70,3 +70,7 @@ Open the folder in Android Studio (Koala or newer) and press Run, or with Gradle
 gradle :app:assembleDebug
 ```
 Before publishing on a store, replace the debug signing config in `app/build.gradle.kts` with your own keystore.
+
+## KankiMix transport core
+
+The `kankimix/` directory contains the KankiMix v2 low-latency UDP transport core (Go, zero dependencies). See [kankimix/README.md](kankimix/README.md).

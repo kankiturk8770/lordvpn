@@ -1,0 +1,23 @@
+name: KankiMix core
+
+on:
+  push:
+    paths: [ 'kankimix/**', '.github/workflows/kankimix.yml' ]
+  pull_request:
+    paths: [ 'kankimix/**', '.github/workflows/kankimix.yml' ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kankimix
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - run: go vet ./...
+      - run: go test -race -count=3 ./...
+      - run: go test -run '^$' -fuzz FuzzDecoder -fuzztime 30s
