@@ -39,6 +39,8 @@ type encoder struct {
 	hasLast      bool
 	lastSymbolAt int64
 	gapAvg       int64
+	sizeAvg      int64
+	rng          uint64
 	primary      *Path
 	parity       []byte
 }
@@ -106,6 +108,7 @@ type Core struct {
 	statsHandshakes     atomic.Uint64
 	statsAddressChanges atomic.Uint64
 	statsPathFailures   atomic.Uint64
+	statsShaped         atomic.Uint64
 }
 
 // NewCore validates config and starts the scheduler and maintenance workers.
@@ -373,6 +376,10 @@ func (c *Core) schedulerLoop() {
 		case <-tail.C:
 			armed = false
 			c.tailRepair(time.Now().UnixMicro())
+			if delay := c.tailDelay(); delay > 0 {
+				tail.Reset(time.Duration(delay) * time.Microsecond)
+				armed = true
+			}
 		case <-c.done:
 			tail.Stop()
 			for {
@@ -400,6 +407,10 @@ func (c *Core) processSymbol(symbol *queuedSymbol, now int64) {
 	primary := c.selectPrimary()
 	if primary == nil {
 		c.statsNoPathDropped.Add(1)
+		return
+	}
+	if symbol.class == ClassBackground && c.shapeDrop(primary) {
+		c.statsShaped.Add(1)
 		return
 	}
 	ttl := (symbol.deadline - now + 999) / 1000
@@ -431,6 +442,7 @@ func (c *Core) processSymbol(symbol *queuedSymbol, now int64) {
 		e.gapAvg = (7*e.gapAvg + gap) / 8
 	}
 	e.lastSymbolAt = now
+	e.sizeAvg = (7*e.sizeAvg + int64(h.length)) / 8
 
 	ratio := c.repairRatio(primary, symbol.class)
 	if ratio <= 0 {
@@ -438,28 +450,59 @@ func (c *Core) processSymbol(symbol *queuedSymbol, now int64) {
 	}
 	e.credit = min(e.credit+ratio, int64(c.config.MaxRepairs)*1000)
 	e.unprotected++
-	for e.credit >= 1000 {
-		c.emitRepair(now, primary)
-		e.credit -= 1000
+	// High-rate streams emit inline to keep up. Low-rate (game tick) streams
+	// are paced by the scheduler timer so repairs are spread between data
+	// packets instead of riding the same loss burst back-to-back.
+	if e.gapAvg < 2_000 {
+		for e.credit >= 1000 {
+			c.emitRepair(now, primary)
+			e.credit -= 1000
+		}
 	}
 }
 
-// tailDelay returns how long to wait (µs) before protecting the tail of a
-// burst, or 0 when no tail repair is pending.
+// shapeDrop is an active queue manager for bulk traffic carried inside the
+// tunnel. When the path's queueing delay rises above target, background
+// symbols are dropped with a probability that grows with the excess delay.
+// Tunnelled TCP reacts by slowing down, so a download cannot build a
+// bottleneck queue under the game traffic sharing the link.
+func (c *Core) shapeDrop(path *Path) bool {
+	queueDelay := path.queueDelay()
+	target := max(int64(15_000), path.minRTTA.Load()/4)
+	if queueDelay <= target {
+		return false
+	}
+	permille := min((queueDelay-target)*1000/100_000, 1000)
+	e := &c.enc
+	if e.rng == 0 {
+		e.rng = uint64(time.Now().UnixNano()) | 1
+	}
+	e.rng ^= e.rng << 13
+	e.rng ^= e.rng >> 7
+	e.rng ^= e.rng << 17
+	return int64(e.rng%1000) < permille
+}
+
+func (e *encoder) repairPending() bool {
+	return e.credit >= 1000 || (e.credit > 0 && e.unprotected > 0)
+}
+
+// tailDelay returns how long to wait (µs) before the next paced repair, or 0
+// when none is pending.
 func (c *Core) tailDelay() int64 {
 	e := &c.enc
-	if e.unprotected == 0 || e.credit <= 0 {
+	if !e.repairPending() {
 		return 0
 	}
-	return max(min(e.gapAvg/2, 8_000), 1_000)
+	return max(min(e.gapAvg/3, 8_000), 1_000)
 }
 
-// tailRepair protects the most recent symbols when traffic pauses, so the
-// last packets of a burst are recoverable without waiting for more data.
-// It borrows from future budget, so the long-run repair rate is unchanged.
+// tailRepair emits one paced repair. When traffic pauses it also protects the
+// tail of a burst by borrowing from future budget, so the long-run repair rate
+// is unchanged while the last packets of a burst stay recoverable.
 func (c *Core) tailRepair(now int64) {
 	e := &c.enc
-	if e.unprotected == 0 || e.credit <= 0 || e.gen != c.sessionGen.Load() {
+	if !e.repairPending() || e.gen != c.sessionGen.Load() {
 		return
 	}
 	primary := c.selectPrimary()
@@ -480,6 +523,20 @@ func (c *Core) repairRatio(path *Path, class TrafficClass) int64 {
 		ratio = 3*loss/1000 + 100
 	}
 	switch class {
+	case ClassRealtime:
+		// Low-rate small-packet streams (game ticks, voice) cost almost no
+		// bandwidth to protect, while every loss is a visible stutter: keep a
+		// generous floor so a loss is repaired within about one tick.
+		if e := &c.enc; e.gapAvg >= 4_000 && e.sizeAvg <= 400 {
+			switch {
+			case loss >= 30_000:
+				ratio = max(ratio, 2000)
+			case loss >= 3_000:
+				ratio = max(ratio, 1000)
+			default:
+				ratio = max(ratio, 500)
+			}
+		}
 	case ClassCritical:
 		ratio = max(ratio, 500)
 	case ClassBackground:
@@ -555,12 +612,18 @@ func (e *encoder) indexFor(base uint64) uint8 {
 	return 0
 }
 
-func pathScore(p *Path) int64 {
+const degradedPenalty = int64(1) << 40
+
+func pathScore(p *Path, now int64) int64 {
 	srtt := p.srttA.Load()
 	if srtt <= 0 {
 		srtt = 100_000
 	}
-	return srtt + int64(p.lossPPM.Load())/4
+	score := srtt + int64(p.lossPPM.Load())/4
+	if p.degraded(now) {
+		score += degradedPenalty
+	}
+	return score
 }
 
 // selectPrimary picks the lowest-cost validated path with hysteresis, so two
@@ -568,19 +631,20 @@ func pathScore(p *Path) int64 {
 // recently alive keyed path instead of dropping traffic.
 func (c *Core) selectPrimary() *Path {
 	e := &c.enc
+	now := time.Now().UnixMicro()
 	var best *Path
 	var bestScore int64
 	for _, p := range c.snapshot() {
 		if !p.usable() {
 			continue
 		}
-		if score := pathScore(p); best == nil || score < bestScore {
+		if score := pathScore(p, now); best == nil || score < bestScore {
 			best, bestScore = p, score
 		}
 	}
 	current := e.primary
 	if best != nil && current != nil && current != best && current.usable() {
-		if bestScore+2_000 >= pathScore(current)*9/10 {
+		if currentScore := pathScore(current, now); currentScore < degradedPenalty && bestScore+2_000 >= currentScore*9/10 {
 			best = current
 		}
 	}
@@ -600,13 +664,14 @@ func (c *Core) selectPrimary() *Path {
 }
 
 func (c *Core) secondPath(exclude *Path) *Path {
+	now := time.Now().UnixMicro()
 	var best *Path
 	var bestScore int64
 	for _, p := range c.snapshot() {
 		if p == exclude || !p.usable() {
 			continue
 		}
-		if score := pathScore(p); best == nil || score < bestScore {
+		if score := pathScore(p, now); best == nil || score < bestScore {
 			best, bestScore = p, score
 		}
 	}
@@ -688,6 +753,7 @@ func (c *Core) Stats() Stats {
 		Handshakes:     c.statsHandshakes.Load(),
 		AddressChanges: c.statsAddressChanges.Load(),
 		PathFailures:   c.statsPathFailures.Load(),
+		ShapedDropped:  c.statsShaped.Load(),
 	}
 }
 

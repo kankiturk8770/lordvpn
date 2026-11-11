@@ -77,7 +77,6 @@ type Path struct {
 	hasRTT           bool
 	lossPPMv         int64
 	rng              uint64
-	firstUnanswered  int64
 	wireBuf          []byte
 	plainBuf         []byte
 	sendAAD          [longHeaderLen]byte
@@ -112,9 +111,13 @@ type Path struct {
 	lastRecv    atomic.Int64
 	lastSend    atomic.Int64 // last ack-eliciting packet
 	lastSendAny atomic.Int64
-	srttA       atomic.Int64
-	minRTTA     atomic.Int64
-	lossPPM     atomic.Uint32
+	// firstUnanswered is when the oldest ack-eliciting packet sent since the
+	// last receipt left (written under sendMu).
+	firstUnanswered atomic.Int64
+	srttA           atomic.Int64
+	minRTTA         atomic.Int64
+	rttvarA         atomic.Int64
+	lossPPM         atomic.Uint32
 
 	statsSent      atomic.Uint64
 	statsReceived  atomic.Uint64
@@ -173,6 +176,24 @@ func (p *Path) queueDelay() int64 {
 	return srtt - minRTT
 }
 
+// suspectAfter is how long transmissions may go unanswered before the path is
+// treated as degraded: probed immediately and avoided by the scheduler.
+func (p *Path) suspectAfter() int64 {
+	suspect := int64(250_000)
+	if srtt := p.srttA.Load(); srtt > 0 {
+		suspect = max(2*srtt+4*p.rttvarA.Load()+30_000, 120_000)
+	}
+	return min(suspect, p.core.config.PathTimeout.Microseconds()/2)
+}
+
+// degraded reports that the peer has not answered recent transmissions for
+// longer than suspectAfter: a soft failure that triggers fast failover to
+// another path long before the hard PathTimeout.
+func (p *Path) degraded(now int64) bool {
+	first := p.firstUnanswered.Load()
+	return first > p.lastRecv.Load() && now-first > p.suspectAfter()
+}
+
 func (p *Path) oneWayDelay() int64 {
 	return p.minRTTA.Load() / 2
 }
@@ -191,7 +212,7 @@ func (p *Path) resetSendState(k *pathKeys) {
 	p.nextPacket = 0
 	p.largestAcked = 0
 	p.lowestUnresolved = 1
-	p.firstUnanswered = 0
+	p.firstUnanswered.Store(0)
 	for i := range p.sent {
 		p.sent[i] = sentPacket{}
 	}
@@ -245,8 +266,8 @@ func (p *Path) seal(bodyLength int, eligible bool, to netip.AddrPort) error {
 	*entry = sentPacket{pn: packetNumber, at: now, eligible: eligible}
 	if eligible {
 		entry.state = stateInflight
-		if p.firstUnanswered <= p.lastRecv.Load() {
-			p.firstUnanswered = now
+		if p.firstUnanswered.Load() <= p.lastRecv.Load() {
+			p.firstUnanswered.Store(now)
 		}
 		p.lastSend.Store(now)
 	}
@@ -523,6 +544,7 @@ func (p *Path) updateRTT(sample, ackDelay, now int64) {
 		p.srtt = (7*p.srtt + adjusted) / 8
 	}
 	p.srttA.Store(p.srtt)
+	p.rttvarA.Store(p.rttvar)
 	p.minRTTA.Store(p.minRTT)
 }
 
@@ -661,7 +683,7 @@ func (p *Path) maintain(now int64) int64 {
 
 	p.sendMu.Lock()
 	p.detectLosses(now)
-	firstUnanswered := p.firstUnanswered
+	firstUnanswered := p.firstUnanswered.Load()
 	p.sendMu.Unlock()
 
 	config := &p.core.config
@@ -681,11 +703,7 @@ func (p *Path) maintain(now int64) int64 {
 		return min(next, p.nextProbeAt)
 	}
 
-	suspect := int64(250_000)
-	if srtt := p.srttA.Load(); srtt > 0 {
-		suspect = max(3*srtt+50_000, 150_000)
-	}
-	suspect = min(suspect, pathTimeout/2)
+	suspect := p.suspectAfter()
 
 	switch {
 	case waiting > pathTimeout && p.probeCount >= 2:

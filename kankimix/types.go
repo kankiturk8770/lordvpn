@@ -137,6 +137,7 @@ type Stats struct {
 	Handshakes     uint64
 	AddressChanges uint64
 	PathFailures   uint64
+	ShapedDropped  uint64 // background symbols dropped by the queue manager
 }
 
 // PathStats contains per-path counters and estimates.
